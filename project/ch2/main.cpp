@@ -1,7 +1,0 @@
-#include <iostream>
-using namespace std;
-#include "hello.h"
-int main( int argc,char** argv){
-    sayHello();
-    return 0;
-}
