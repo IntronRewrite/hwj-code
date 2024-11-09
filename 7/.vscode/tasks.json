@@ -1,0 +1,59 @@
+// 这是一个 VS Code 的任务配置文件，用于自动化构建过程。
+// 版本号为 2.0.0。
+// 配置选项中设置了工作目录为 ${workspaceFolder}/build。
+
+// 任务列表包含三个任务：
+
+// 1. "cmake" 任务：
+//    - 类型：shell
+//    - 标签：cmake
+//    - 命令：cmake
+//    - 参数：[".."]
+
+// 2. "make" 任务：
+//    - 标签：make
+//    - 组：
+//      - 类型：build
+//      - 默认：true
+//    - 命令：make
+//    - 参数：[]
+
+// 3. "Build" 任务：
+//    - 标签：Build
+//    - 依赖顺序：sequence
+//    - 依赖任务：["cmake", "make"]
+{
+    "version": "2.0.0",
+    "options": {
+    "cwd": "${workspaceFolder}/build",
+    },
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "cmake",
+            "command": "cmake",
+            "args": [
+            ".."
+            ]
+        },
+        {
+            "label": "make",
+            "group": {
+            "kind": "build",
+            "isDefault": true
+            },
+            "command": "make",
+            "args": [
+            
+            ]
+        },
+        {
+            "label": "Build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+            "cmake",
+            "make"
+            ]
+        }
+    ],
+}
