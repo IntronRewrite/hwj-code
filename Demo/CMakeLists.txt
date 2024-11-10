@@ -18,9 +18,12 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # 添加源文件
 add_executable(main main.cpp)
-
 # 链接 OpenCV 库
 target_link_libraries(main ${OpenCV_LIBS})
+
+# 添加源文件并生成可执行文件 additional
+add_executable(1.1 1.1.cpp)
+target_link_libraries(1.1 ${OpenCV_LIBS})
 
 message(STATUS "OpenCV libraries: ${OpenCV_LIBS}")
 message(STATUS "OpenCV include directories: ${OpenCV_INCLUDE_DIRS}")

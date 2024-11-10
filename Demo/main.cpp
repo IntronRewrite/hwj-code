@@ -1,34 +1,35 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "opencv2/opencv_modules.hpp"
-#include <opencv2/core/utility.hpp>
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/timelapsers.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/stitching/warpers.hpp"
- 
+#include <iostream> // 包含输入输出流库
+#include <fstream> // 包含文件流库
+#include <string> // 包含字符串库
+#include "opencv2/opencv_modules.hpp" // 包含OpenCV模块
+#include <opencv2/core/utility.hpp> // 包含OpenCV核心工具库
+#include "opencv2/imgcodecs.hpp" // 包含OpenCV图像编解码库
+#include "opencv2/highgui.hpp" // 包含OpenCV高层GUI库
+#include "opencv2/stitching/detail/autocalib.hpp" // 包含OpenCV拼接细节自动校准库
+#include "opencv2/stitching/detail/blenders.hpp" // 包含OpenCV拼接细节混合器库
+#include "opencv2/stitching/detail/timelapsers.hpp" // 包含OpenCV拼接细节时间推移器库
+#include "opencv2/stitching/detail/camera.hpp" // 包含OpenCV拼接细节相机库
+#include "opencv2/stitching/detail/exposure_compensate.hpp" // 包含OpenCV拼接细节曝光补偿库
+#include "opencv2/stitching/detail/matchers.hpp" // 包含OpenCV拼接细节匹配器库
+#include "opencv2/stitching/detail/motion_estimators.hpp" // 包含OpenCV拼接细节运动估计器库
+#include "opencv2/stitching/detail/seam_finders.hpp" // 包含OpenCV拼接细节接缝查找器库
+#include "opencv2/stitching/detail/warpers.hpp" // 包含OpenCV拼接细节扭曲器库
+#include "opencv2/stitching/warpers.hpp" // 包含OpenCV拼接扭曲器库
+
 #ifdef HAVE_OPENCV_XFEATURES2D
-#include "opencv2/xfeatures2d.hpp"
-#include "opencv2/xfeatures2d/nonfree.hpp"
+#include "opencv2/xfeatures2d.hpp" // 包含OpenCV扩展特征2D库
+#include "opencv2/xfeatures2d/nonfree.hpp" // 包含OpenCV扩展特征2D非自由库
 #endif
- 
-#define ENABLE_LOG 1
-#define LOG(msg) std::cout << msg
-#define LOGLN(msg) std::cout << msg << std::endl
- 
-using namespace std;
-using namespace cv;
-using namespace cv::detail;
- 
+
+#define ENABLE_LOG 1 // 启用日志记录
+#define LOG(msg) std::cout << msg // 定义日志输出宏
+#define LOGLN(msg) std::cout << msg << std::endl // 定义日志输出并换行宏
+
+using namespace std; // 使用标准命名空间
+using namespace cv; // 使用OpenCV命名空间
+using namespace cv::detail; // 使用OpenCV细节命名空间
+
+// 打印使用方法
 static void printUsage(char** argv)
 {
     cout <<
@@ -104,63 +105,68 @@ static void printUsage(char** argv)
         "  --rangewidth <int>\n"
         "      uses range_width to limit number of images to match with.\n";
 }
- 
- 
-// Default command line args
-vector<String> img_names;
-bool preview = false;
-bool try_cuda = false;
-double work_megapix = 0.6;
-double seam_megapix = 0.1;
-double compose_megapix = -1;
-float conf_thresh = 1.f;
+
+// 默认命令行参数
+vector<String> img_names; // 图像名称列表
+bool preview = false; // 预览模式标志
+bool try_cuda = false; // 尝试使用CUDA标志
+double work_megapix = 0.6; // 工作分辨率（百万像素）
+double seam_megapix = 0.1; // 接缝分辨率（百万像素）
+double compose_megapix = -1; // 合成分辨率（百万像素）
+float conf_thresh = 1.f; // 置信度阈值
 #ifdef HAVE_OPENCV_XFEATURES2D
-string features_type = "surf";
-float match_conf = 0.65f;
+string features_type = "surf"; // 特征类型
+float match_conf = 0.65f; // 匹配置信度
 #else
-string features_type = "orb";
-float match_conf = 0.3f;
+string features_type = "orb"; // 特征类型
+float match_conf = 0.3f; // 匹配置信度
 #endif
-string matcher_type = "homography";
-string estimator_type = "homography";
-string ba_cost_func = "ray";
-string ba_refine_mask = "xxxxx";
-bool do_wave_correct = true;
-WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
-bool save_graph = false;
-std::string save_graph_to;
-string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-int expos_comp_nr_feeds = 1;
-int expos_comp_nr_filtering = 2;
-int expos_comp_block_size = 32;
-string seam_find_type = "gc_color";
-int blend_type = Blender::MULTI_BAND;
-int timelapse_type = Timelapser::AS_IS;
-float blend_strength = 5;
-string result_name = "result.jpg";
-bool timelapse = false;
-int range_width = -1;
+string matcher_type = "homography"; // 匹配器类型
+string estimator_type = "homography"; // 估计器类型
+string ba_cost_func = "ray"; // 捆绑调整成本函数
+string ba_refine_mask = "xxxxx"; // 捆绑调整细化掩码
+bool do_wave_correct = true; // 波形校正标志
+WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // 波形校正类型
+bool save_graph = false; // 保存图形标志
+std::string save_graph_to; // 保存图形文件名
+string warp_type = "spherical"; // 扭曲类型
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; // 曝光补偿类型
+int expos_comp_nr_feeds = 1; // 曝光补偿次数
+int expos_comp_nr_filtering = 2; // 曝光补偿过滤次数
+int expos_comp_block_size = 32; // 曝光补偿块大小
+string seam_find_type = "gc_color"; // 接缝查找类型
+int blend_type = Blender::MULTI_BAND; // 混合类型
+int timelapse_type = Timelapser::AS_IS; // 时间推移类型
+float blend_strength = 5; // 混合强度
+string result_name = "result.jpg"; // 结果图像名称
+bool timelapse = false; // 时间推移标志
+int range_width = -1; // 范围宽度
  
  
+// 解析命令行参数
 static int parseCmdArgs(int argc, char** argv)
 {
+    // 如果没有参数，打印使用方法并返回错误
     if (argc == 1)
     {
         printUsage(argv);
         return -1;
     }
+    // 遍历所有参数
     for (int i = 1; i < argc; ++i)
     {
+        // 如果参数是--help或/?，打印使用方法并返回错误
         if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
         {
             printUsage(argv);
             return -1;
         }
+        // 如果参数是--preview，设置预览模式标志
         else if (string(argv[i]) == "--preview")
         {
             preview = true;
         }
+        // 如果参数是--try_cuda，设置尝试使用CUDA标志
         else if (string(argv[i]) == "--try_cuda")
         {
             if (string(argv[i + 1]) == "no")
@@ -174,26 +180,31 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--work_megapix，设置工作分辨率
         else if (string(argv[i]) == "--work_megapix")
         {
             work_megapix = atof(argv[i + 1]);
             i++;
         }
+        // 如果参数是--seam_megapix，设置接缝分辨率
         else if (string(argv[i]) == "--seam_megapix")
         {
             seam_megapix = atof(argv[i + 1]);
             i++;
         }
+        // 如果参数是--compose_megapix，设置合成分辨率
         else if (string(argv[i]) == "--compose_megapix")
         {
             compose_megapix = atof(argv[i + 1]);
             i++;
         }
+        // 如果参数是--result，设置结果图像名称
         else if (string(argv[i]) == "--result")
         {
             result_name = argv[i + 1];
             i++;
         }
+        // 如果参数是--features，设置特征类型
         else if (string(argv[i]) == "--features")
         {
             features_type = argv[i + 1];
@@ -201,6 +212,7 @@ static int parseCmdArgs(int argc, char** argv)
                 match_conf = 0.3f;
             i++;
         }
+        // 如果参数是--matcher，设置匹配器类型
         else if (string(argv[i]) == "--matcher")
         {
             if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
@@ -212,6 +224,7 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--estimator，设置估计器类型
         else if (string(argv[i]) == "--estimator")
         {
             if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
@@ -223,21 +236,25 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--match_conf，设置匹配置信度
         else if (string(argv[i]) == "--match_conf")
         {
             match_conf = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
+        // 如果参数是--conf_thresh，设置置信度阈值
         else if (string(argv[i]) == "--conf_thresh")
         {
             conf_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
+        // 如果参数是--ba，设置捆绑调整成本函数
         else if (string(argv[i]) == "--ba")
         {
             ba_cost_func = argv[i + 1];
             i++;
         }
+        // 如果参数是--ba_refine_mask，设置捆绑调整细化掩码
         else if (string(argv[i]) == "--ba_refine_mask")
         {
             ba_refine_mask = argv[i + 1];
@@ -248,6 +265,7 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--wave_correct，设置波形校正标志和类型
         else if (string(argv[i]) == "--wave_correct")
         {
             if (string(argv[i + 1]) == "no")
@@ -269,17 +287,20 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--save_graph，设置保存图形标志和文件名
         else if (string(argv[i]) == "--save_graph")
         {
             save_graph = true;
             save_graph_to = argv[i + 1];
             i++;
         }
+        // 如果参数是--warp，设置扭曲类型
         else if (string(argv[i]) == "--warp")
         {
             warp_type = string(argv[i + 1]);
             i++;
         }
+        // 如果参数是--expos_comp，设置曝光补偿类型
         else if (string(argv[i]) == "--expos_comp")
         {
             if (string(argv[i + 1]) == "no")
@@ -299,21 +320,25 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--expos_comp_nr_feeds，设置曝光补偿次数
         else if (string(argv[i]) == "--expos_comp_nr_feeds")
         {
             expos_comp_nr_feeds = atoi(argv[i + 1]);
             i++;
         }
+        // 如果参数是--expos_comp_nr_filtering，设置曝光补偿过滤次数
         else if (string(argv[i]) == "--expos_comp_nr_filtering")
         {
             expos_comp_nr_filtering = atoi(argv[i + 1]);
             i++;
         }
+        // 如果参数是--expos_comp_block_size，设置曝光补偿块大小
         else if (string(argv[i]) == "--expos_comp_block_size")
         {
             expos_comp_block_size = atoi(argv[i + 1]);
             i++;
         }
+        // 如果参数是--seam，设置接缝查找类型
         else if (string(argv[i]) == "--seam")
         {
             if (string(argv[i + 1]) == "no" ||
@@ -330,6 +355,7 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--blend，设置混合类型
         else if (string(argv[i]) == "--blend")
         {
             if (string(argv[i + 1]) == "no")
@@ -345,6 +371,7 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--timelapse，设置时间推移标志和类型
         else if (string(argv[i]) == "--timelapse")
         {
             timelapse = true;
@@ -360,24 +387,29 @@ static int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        // 如果参数是--rangewidth，设置范围宽度
         else if (string(argv[i]) == "--rangewidth")
         {
             range_width = atoi(argv[i + 1]);
             i++;
         }
+        // 如果参数是--blend_strength，设置混合强度
         else if (string(argv[i]) == "--blend_strength")
         {
             blend_strength = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
+        // 如果参数是--output，设置输出文件名
         else if (string(argv[i]) == "--output")
         {
             result_name = argv[i + 1];
             i++;
         }
+        // 否则，将参数视为图像名称
         else
             img_names.push_back(argv[i]);
     }
+    // 如果是预览模式，设置合成分辨率
     if (preview)
     {
         compose_megapix = 0.6;
@@ -385,59 +417,58 @@ static int parseCmdArgs(int argc, char** argv)
     return 0;
 }
  
- 
 int main(int argc, char* argv[])
 {
 #if ENABLE_LOG
-    int64 app_start_time = getTickCount();
+    int64 app_start_time = getTickCount(); // 获取应用程序开始时间
 #endif
  
 #if 0
-    cv::setBreakOnError(true);
+    cv::setBreakOnError(true); // 设置在错误时中断
 #endif
  
-    int retval = parseCmdArgs(argc, argv);
+    int retval = parseCmdArgs(argc, argv); // 解析命令行参数
     if (retval)
-        return retval;
+        return retval; // 如果解析失败，返回错误代码
  
-    // Check if have enough images
+    // 检查是否有足够的图像
     int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
-        LOGLN("Need more images");
+        LOGLN("Need more images"); // 如果图像数量少于2，输出错误信息并返回错误代码
         return -1;
     }
  
-    double work_scale = 1, seam_scale = 1, compose_scale = 1;
-    bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
+    double work_scale = 1, seam_scale = 1, compose_scale = 1; // 初始化工作、接缝和合成比例
+    bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false; // 初始化比例设置标志
  
-    LOGLN("Finding features...");
+    LOGLN("Finding features..."); // 输出查找特征信息
 #if ENABLE_LOG
-    int64 t = getTickCount();
+    int64 t = getTickCount(); // 获取当前时间
 #endif
  
-    Ptr<Feature2D> finder;
+    Ptr<Feature2D> finder; // 定义特征检测器指针
     if (features_type == "orb")
     {
-        finder = ORB::create();
+        finder = ORB::create(); // 创建ORB特征检测器
     }
     else if (features_type == "akaze")
     {
-        finder = AKAZE::create();
+        finder = AKAZE::create(); // 创建AKAZE特征检测器
     }
 #ifdef HAVE_OPENCV_XFEATURES2D
     else if (features_type == "surf")
     {
-        finder = xfeatures2d::SURF::create();
+        finder = xfeatures2d::SURF::create(); // 创建SURF特征检测器
     }
 #endif
     else if (features_type == "sift")
     {
-        finder = SIFT::create();
+        finder = SIFT::create(); // 创建SIFT特征检测器
     }
     else
     {
-        cout << "Unknown 2D features type: '" << features_type << "'.\n";
+        cout << "Unknown 2D features type: '" << features_type << "'.\n"; // 输出未知特征类型错误信息
         return -1;
     }
  
