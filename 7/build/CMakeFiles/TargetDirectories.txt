@@ -1,3 +1,0 @@
-/home/lw/hwj-code-c/7/build/CMakeFiles/my_cmake_exe.dir
-/home/lw/hwj-code-c/7/build/CMakeFiles/edit_cache.dir
-/home/lw/hwj-code-c/7/build/CMakeFiles/rebuild_cache.dir
